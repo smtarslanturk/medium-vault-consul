@@ -1,0 +1,15 @@
+# Consul-template configmap.
+# cm-1.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test
+  name: consul-template-cm
+data:
+  config.tpl: |
+    server:
+      port: "{{ key "apps/example/serverPort" }}"
+    toggles:
+      fooEnabled: {{ key "apps/example/fooEnabled" }}
+    database:
+      username: "{{ key "apps/example/dbUsername" }}

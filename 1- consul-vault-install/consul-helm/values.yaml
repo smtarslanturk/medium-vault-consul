@@ -1,0 +1,20 @@
+# Contains values that affect multiple components of the chart.
+global:
+ name: consul
+server:
+#  enabled: true
+# The number of server agents to run. This determines the fault tolerance of the cluster.
+ replicas: 1
+# Contains values that configure the Consul UI.
+ bootstrapExpect: 1
+ disruptionBudget:
+   enabled: true
+   maxUnavailable: 0
+ui:
+#  enabled: true
+# Registers a Kubernetes Service for the Consul UI as a NodePort.
+ service:
+   type: NodePort
+# Configures and installs the automatic Consul Connect sidecar injector.
+connectInject:
+ enabled: true

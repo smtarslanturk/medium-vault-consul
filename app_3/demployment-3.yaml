@@ -1,0 +1,92 @@
+# Sample app for consul and vault with vault-agent and consul-template.
+# deployment-3.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consul-template-demo
+  labels:
+    app: consul-template-demo
+  namespace: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consul-template-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: consul-template-demo
+    spec:
+      serviceAccountName: demo-consul-sa
+      volumes:
+        - name: config-input-volume
+          configMap:
+            name: consul-template-cm
+        - name: config-output-volume
+          emptyDir:
+            medium: Memory
+        - name: vault-auth-config
+          configMap:
+            name: vault-agent-config
+            items:
+            - key: vault-agent-config.hcl
+              path: vault-agent-config.hcl
+        - name: vault-client-token
+          emptyDir: {}
+      initContainers:
+        - name: vault-agent-init
+          image: hashicorp/vault:1.12.0 #default Vault-Agent image. 
+          args:
+          - agent
+          - -config=/etc/vault/vault-agent-config.hcl
+          - -log-level=debug
+          env:
+          - name: VAULT_ADDR
+            value: "http://vault.vault:8200"
+          volumeMounts:
+          - mountPath: /etc/vault
+            name: vault-auth-config
+          - mountPath: /home/vault
+            name: vault-client-token
+        - name: consul-template-init
+          image: 14531923/consultemplate-consul-vault-vaultagent:1.0
+          env:
+            - name: CONSUL_ADDR
+              value: "http://consul-server.hashicorp:8500"
+            - name: VAULT_ADDR
+              value: "http://vault.vault:8200"
+            - name: VAULT_TOKEN
+              value: /home/vault/.vault-token
+            - name: TEMPLATE_FILEPATH
+              value: /conf/config.tpl
+            - name: CONFIG_OUTPUT_FILEPATH
+              value: /app/config/appconfig.json
+            - name: EXTRA_ARGS
+              value: "-once"
+          volumeMounts:
+            - name: config-input-volume
+              mountPath: /conf
+            - name: config-output-volume
+              mountPath: /app/config
+            - name: vault-client-token
+              mountPath: /home/vault
+          imagePullPolicy: IfNotPresent
+      containers:
+        - name: application
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: config-output-volume
+              mountPath: /app/config
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 120
+      schedulerName: default-scheduler

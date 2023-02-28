@@ -1,0 +1,17 @@
+# cm-3.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: test
+  name: consul-template-cm
+data:
+  config.tpl: |
+    server:
+      port: "{{ key "apps/example/serverPort" }}"
+    toggles:
+      fooEnabled: {{ key "apps/example/fooEnabled" }}
+    database:
+      username: "{{ key "apps/example/dbUsername" }}"
+      {{ with secret "demoKv2/data/path1" }}
+      password: "{{ .Data.data.key1 }}"
+      {{ end }}

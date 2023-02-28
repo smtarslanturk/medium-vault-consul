@@ -1,0 +1,8 @@
+# sa-1.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: test
+  name: demo-consul-sa
+  labels:
+    app: consul-template-demo

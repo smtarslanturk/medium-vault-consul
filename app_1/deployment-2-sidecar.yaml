@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consul-template-demo
+  labels:
+    app: consul-template-demo
+  namespace: test 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consul-template-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: consul-template-demo
+    spec:
+      serviceAccountName: demo-consul-sa
+      volumes:
+        - name: config-input-volume
+          configMap:
+            name: consul-template-cm
+        - name: config-output-volume
+          emptyDir:
+            medium: Memory
+      containers:
+        - name: application
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: config-output-volume
+              mountPath: /app/config
+          imagePullPolicy: IfNotPresent
+        - name: consul-template-sidecar
+          image: 14531923/consul-template-consul:1.0
+          env:
+            - name: CONSUL_ADDR
+              value: "http://consul-server.hashicorp:8500"
+            - name: TEMPLATE_FILEPATH
+              value: /conf/config.tpl
+            - name: CONFIG_OUTPUT_FILEPATH
+              value: /app/config/app-config.yml
+          volumeMounts:
+            - name: config-input-volume
+              mountPath: /conf
+            - name: config-output-volume
+              mountPath: /app/config
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 120
+      schedulerName: default-scheduler
